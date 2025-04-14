@@ -1,4 +1,6 @@
 from setuptools import find_packages, setup
+import os
+from glob import glob
 
 package_name = 'px4_flight'
 
@@ -10,6 +12,8 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        # Install all launch files
+        (os.path.join('share', package_name, 'launch'), glob('launch/*.py')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -18,7 +22,7 @@ setup(
     description='TODO: Package description',
     license='MIT',
     #tests_require=['pytest'],
-    entry_points={
+    entry_points={ # 'fly_ring = px4_flight.fly_ring:main'
         'console_scripts': [
             'fly_ring = px4_flight.fly_ring:main'
         ],

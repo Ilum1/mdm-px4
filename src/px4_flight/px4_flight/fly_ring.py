@@ -3,42 +3,39 @@ import math
 import time
 from rclpy.node import Node
 from px4_msgs.msg import VehicleCommand, OffboardControlMode, TrajectorySetpoint
-from threading import Timer
 
-class RingFlight(Node):
+class MultiDroneFlight(Node):
     def __init__(self):
-        super().__init__('ring_flight')
-        self.offboard_mode_pub = self.create_publisher(OffboardControlMode, '/fmu/in/offboard_control_mode', 10)
-        self.trajectory_pub = self.create_publisher(TrajectorySetpoint, '/fmu/in/trajectory_setpoint', 10)
-        self.vehicle_command_pub = self.create_publisher(VehicleCommand, '/fmu/in/vehicle_command', 10)
+        self.is_armed = False
 
-        self.timer = self.create_timer(0.1, self.send_setpoint)  # 10Hz
-        self.radius = 10.0
-        self.altitude = -5.0
-        self.speed = 5.0
-        self.angle = 0.0
+        super().__init__('multi_drone_flight')
+
+        # Declare and get parameters
+        self.declare_parameter('radius', 5.0)
+        self.declare_parameter('altitude', -5.0)
+        self.declare_parameter('speed', 5.0)
+
+        self.radius = self.get_parameter('radius').value
+        self.altitude = self.get_parameter('altitude').value
+        self.speed = self.get_parameter('speed').value
+
         self.center_x = 0.0
         self.center_y = 0.0
-
-        self.declare_parameters(namespace='', parameters=[
-            ('radius', self.radius),
-            ('altitude', self.altitude),
-            ('speed', self.speed)
-        ])
-
-        self.radius = self.get_parameter('radius').get_parameter_value().double_value
-        self.altitude = self.get_parameter('altitude').get_parameter_value().double_value
-        self.speed = self.get_parameter('speed').get_parameter_value().double_value
-
+        self.angle = 0.0
         self.start_time = time.time()
 
-        # Delay mode setting and arming until PX4 has seen enough setpoints
-        Timer(1.0, self.start_offboard_mode).start()
+        # Use relative topic names — they will be automatically namespaced
+        self.offboard_mode_pub = self.create_publisher(OffboardControlMode, 'fmu/in/offboard_control_mode', 10)
+        self.trajectory_pub = self.create_publisher(TrajectorySetpoint, 'fmu/in/trajectory_setpoint', 10)
+        self.vehicle_command_pub = self.create_publisher(VehicleCommand, 'fmu/in/vehicle_command', 10)
+
+        self.create_timer(0.1, self.send_setpoint)
+        self.create_timer(1.0, self.start_offboard_mode)
 
     def start_offboard_mode(self):
         self.get_logger().info('Setting mode to OFFBOARD...')
-        self.send_vehicle_command(VehicleCommand.VEHICLE_CMD_DO_SET_MODE, 1.0, 6.0)  # 6 = PX4_CUSTOM_MAIN_MODE_OFFBOARD
-        Timer(0.5, self.arm).start()
+        self.send_vehicle_command(VehicleCommand.VEHICLE_CMD_DO_SET_MODE, 1.0, 6.0)
+        self.create_timer(0.5, self.arm)
 
     def send_vehicle_command(self, command, param1=0.0, param2=0.0):
         msg = VehicleCommand()
@@ -54,8 +51,13 @@ class RingFlight(Node):
         self.vehicle_command_pub.publish(msg)
 
     def arm(self):
-        self.get_logger().info('Arming...')
-        self.send_vehicle_command(VehicleCommand.VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.0)
+        if not self.is_armed:
+            self.get_logger().info('Arming...')
+            self.send_vehicle_command(VehicleCommand.VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.0)
+            self.is_armed = True
+        else:
+            self.get_logger().info('Already armed.')
+
 
     def send_setpoint(self):
         elapsed_time = time.time() - self.start_time
@@ -63,29 +65,23 @@ class RingFlight(Node):
         x = self.center_x + self.radius * math.cos(self.angle)
         y = self.center_y + self.radius * math.sin(self.angle)
 
-        trajectory_msg = TrajectorySetpoint()
-        trajectory_msg.position = [x, y, self.altitude]
-        trajectory_msg.yaw = self.angle + math.pi / 2
-        trajectory_msg.timestamp = int(time.time() * 1e6)
-        self.trajectory_pub.publish(trajectory_msg)
+        traj_msg = TrajectorySetpoint()
+        traj_msg.position = [x, y, self.altitude]
+        traj_msg.yaw = self.angle + math.pi / 2
+        traj_msg.timestamp = int(time.time() * 1e6)
+        self.trajectory_pub.publish(traj_msg)
 
         offboard_msg = OffboardControlMode()
         offboard_msg.position = True
-        offboard_msg.velocity = False
-        offboard_msg.acceleration = False
-        offboard_msg.attitude = False
         offboard_msg.timestamp = int(time.time() * 1e6)
         self.offboard_mode_pub.publish(offboard_msg)
 
-        self.get_logger().info(f'Setpoint: x={x:.2f}, y={y:.2f}, z={self.altitude:.2f} Version: 0.0.2')
-
+        self.get_logger().info(f'Setpoint: x={x:.2f}, y={y:.2f}, z={self.altitude:.2f}')
+        self.get_logger().info(f"Drone is at position x={x:.2f}, y={y:.2f}, z={self.altitude:.2f}")
 
 def main(args=None):
     rclpy.init(args=args)
-    node = RingFlight()
+    node = MultiDroneFlight()
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
-
-if __name__ == '__main__':
-    main()
