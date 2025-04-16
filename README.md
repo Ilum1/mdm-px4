@@ -217,6 +217,12 @@ cd ~/PX4-Autopilot/
 sh -c "PX4_SYS_AUTOSTART=4001 PX4_GZ_MODEL_POSE="0,2" PX4_GZ_MODEL=x500 ./build/px4_sitl_default/bin/px4 -i 3; bash"
 ```
 
+### Source and build
+source /workspaces/mdm-px4/install/setup.bash 
+colcon build --packages-select px4_msgs
+colcon build --packages-select px4_flight
+
+
 ### Run launch script and watch the drones fly in a circle:
 ```
 ros2 launch px4_flight multi_drone_launch.py
