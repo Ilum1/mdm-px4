@@ -3,6 +3,7 @@ import math
 import time
 from rclpy.node import Node
 from px4_msgs.msg import VehicleCommand, OffboardControlMode, TrajectorySetpoint
+from threading import Timer
 
 class RingFlight(Node):
     def __init__(self):
@@ -10,12 +11,12 @@ class RingFlight(Node):
         self.offboard_mode_pub = self.create_publisher(OffboardControlMode, '/fmu/in/offboard_control_mode', 10)
         self.trajectory_pub = self.create_publisher(TrajectorySetpoint, '/fmu/in/trajectory_setpoint', 10)
         self.vehicle_command_pub = self.create_publisher(VehicleCommand, '/fmu/in/vehicle_command', 10)
-        
-        self.timer = self.create_timer(0.1, self.send_setpoint)
-        self.radius = 40.0  # Radius of the circular path
-        self.altitude = -5.0  # Altitude in NED frame (negative for up)
-        self.speed = 20.0  # Speed in m/s
-        self.angle = 1.0  # Starting angle
+
+        self.timer = self.create_timer(0.1, self.send_setpoint)  # 10Hz
+        self.radius = 10.0
+        self.altitude = -5.0
+        self.speed = 5.0
+        self.angle = 0.0
         self.center_x = 0.0
         self.center_y = 0.0
 
@@ -30,8 +31,14 @@ class RingFlight(Node):
         self.speed = self.get_parameter('speed').get_parameter_value().double_value
 
         self.start_time = time.time()
-        self.send_vehicle_command(VehicleCommand.VEHICLE_CMD_DO_SET_MODE, 1.0, 6.0)
-        self.arm()
+
+        # Delay mode setting and arming until PX4 has seen enough setpoints
+        Timer(1.0, self.start_offboard_mode).start()
+
+    def start_offboard_mode(self):
+        self.get_logger().info('Setting mode to OFFBOARD...')
+        self.send_vehicle_command(VehicleCommand.VEHICLE_CMD_DO_SET_MODE, 1.0, 6.0)  # 6 = PX4_CUSTOM_MAIN_MODE_OFFBOARD
+        Timer(0.5, self.arm).start()
 
     def send_vehicle_command(self, command, param1=0.0, param2=0.0):
         msg = VehicleCommand()
@@ -58,7 +65,7 @@ class RingFlight(Node):
 
         trajectory_msg = TrajectorySetpoint()
         trajectory_msg.position = [x, y, self.altitude]
-        trajectory_msg.yaw = self.angle + math.pi / 2  # Face forward
+        trajectory_msg.yaw = self.angle + math.pi / 2
         trajectory_msg.timestamp = int(time.time() * 1e6)
         self.trajectory_pub.publish(trajectory_msg)
 
@@ -70,7 +77,7 @@ class RingFlight(Node):
         offboard_msg.timestamp = int(time.time() * 1e6)
         self.offboard_mode_pub.publish(offboard_msg)
 
-        self.get_logger().info(f'Setpoint: x={x:.2f}, y={y:.2f}, z={self.altitude:.2f}')
+        self.get_logger().info(f'Setpoint: x={x:.2f}, y={y:.2f}, z={self.altitude:.2f} Version: 0.0.2')
 
 
 def main(args=None):
@@ -79,6 +86,8 @@ def main(args=None):
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
+
+
 
 if __name__ == '__main__':
     main()

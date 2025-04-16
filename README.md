@@ -177,3 +177,47 @@ docker: Error response from daemon: invalid mount config for type
 ```
 
 Fix this by adding the directories in the error message to your **shared files** in your docker desktop settings under **Resources** -> **File sharing** -> **Virtual file shares**.
+
+
+
+# Ilum launch notes:
+### Launch QGroundControl on your pc:
+```
+cd ~/QGroundControl
+./QGroundControl.AppImage
+```
+
+### New terminal:
+```
+cd mdm-px4
+code .
+```
+
+### Open in dev container:
+CTRL+SHIFT+P
+>Dev Containers: Rebuild and Reopen in Container
+
+### In VS Code terminal:
+```
+MicroXRCEAgent udp4 --port 8888
+```
+
+### Launch drones (Each in a new terminal, still in the vs code terminal, since you need to launch them in the workspace)
+
+```
+cd ~/PX4-Autopilot/
+sh -c "PX4_SYS_AUTOSTART=4001 PX4_GZ_MODEL_POSE="0,0" PX4_GZ_MODEL=x500 ./build/px4_sitl_default/bin/px4 -i 1; bash"
+```
+```
+cd ~/PX4-Autopilot/
+sh -c "PX4_SYS_AUTOSTART=4001 PX4_GZ_MODEL_POSE="0,1" PX4_GZ_MODEL=x500 ./build/px4_sitl_default/bin/px4 -i 2; bash"
+```
+```
+cd ~/PX4-Autopilot/
+sh -c "PX4_SYS_AUTOSTART=4001 PX4_GZ_MODEL_POSE="0,2" PX4_GZ_MODEL=x500 ./build/px4_sitl_default/bin/px4 -i 3; bash"
+```
+
+### Run launch script and watch the drones fly in a circle:
+```
+ros2 launch px4_flight multi_drone_launch.py
+```
