@@ -183,7 +183,7 @@ Fix this by adding the directories in the error message to your **shared files**
 # Ilum launch notes:
 ### Launch QGroundControl on your pc:
 ```
-cd ~/QGroundControl
+cd ~/QGroundControl.AppImage
 ./QGroundControl.AppImage
 ```
 
@@ -193,9 +193,11 @@ cd mdm-px4
 code .
 ```
 
-### Clone px4 msgs
-git clone https://github.com/PX4/px4_msgs
-
+### CD to mdm-px4/src and clone px4_msgs repo (replace the current empty px4_msgs directory)
+```
+cd src
+git clone https://github.com/PX4/px4_msgs.git
+```
 
 ### Open in dev container:
 CTRL+SHIFT+P
@@ -222,10 +224,11 @@ sh -c "PX4_SYS_AUTOSTART=4001 PX4_GZ_MODEL_POSE="0,2" PX4_GZ_MODEL=x500 ./build/
 ```
 
 ### Source and build
-source /workspaces/mdm-px4/install/setup.bash 
+```
 colcon build --packages-select px4_msgs
 colcon build --packages-select px4_flight
-
+source /workspaces/mdm-px4/install/setup.bash
+```
 
 ### Run launch script and watch the drones fly in a circle:
 ```
