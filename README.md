@@ -193,6 +193,10 @@ cd mdm-px4
 code .
 ```
 
+### Clone px4 msgs
+git clone https://github.com/PX4/px4_msgs
+
+
 ### Open in dev container:
 CTRL+SHIFT+P
 >Dev Containers: Rebuild and Reopen in Container
