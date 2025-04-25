@@ -234,3 +234,9 @@ source /workspaces/mdm-px4/install/setup.bash
 ```
 ros2 launch px4_flight multi_drone_launch.py
 ```
+
+### New launch without launch script
+```
+ros2 run px4_flight fly_ring
+```
+
